@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MEDICO
+}
+
+enum ReportStatus {
+  PENDENTE
+  CONCLUIDO
+}
+
+model Usuario {
+  id              String         @id @default(cuid())
+  nome            String
+  email           String         @unique
+  senhaHash       String         @map("senha_hash")
+  role            UserRole       @default(MEDICO)
+  hospitalAtualId String?        @map("hospital_atual_id")
+  hospitalAtual   Hospital?      @relation(fields: [hospitalAtualId], references: [id])
+  relatorios      RelatoriosFila[]
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@map("usuarios")
+}
+
+model Hospital {
+  id            String           @id @default(cuid())
+  nome          String           @unique
+  larguraCm     Decimal          @map("largura_cm") @db.Decimal(8, 2)
+  alturaCm      Decimal          @map("altura_cm") @db.Decimal(8, 2)
+  fonteArquivo  String           @map("fonte_arquivo")
+  coordenadas   Coordenadas?
+  sintomas      Sintoma[]
+  usuarios      Usuario[]
+  relatorios    RelatoriosFila[]
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@map("hospitais")
+}
+
+model Coordenadas {
+  id                      String   @id @default(cuid())
+  hospitalId              String   @unique @map("hospital_id")
+  tituloXcm               Decimal  @map("titulo_x_cm") @db.Decimal(8, 2)
+  tituloYcm               Decimal  @map("titulo_y_cm") @db.Decimal(8, 2)
+  corpoXcm                Decimal  @map("corpo_x_cm") @db.Decimal(8, 2)
+  corpoYcm                Decimal  @map("corpo_y_cm") @db.Decimal(8, 2)
+  corpoMaxXcm             Decimal  @map("corpo_max_x_cm") @db.Decimal(8, 2)
+  corpoLimiteInferiorYcm  Decimal  @map("corpo_limite_inferior_y_cm") @db.Decimal(8, 2)
+  cidXcm                  Decimal  @map("cid_x_cm") @db.Decimal(8, 2)
+  cidYcm                  Decimal  @map("cid_y_cm") @db.Decimal(8, 2)
+  encerramentoXcm         Decimal  @map("encerramento_x_cm") @db.Decimal(8, 2)
+  encerramentoYcm         Decimal  @map("encerramento_y_cm") @db.Decimal(8, 2)
+  carimboXcm              Decimal  @map("carimbo_x_cm") @db.Decimal(8, 2)
+  carimboYcm              Decimal  @map("carimbo_y_cm") @db.Decimal(8, 2)
+  hospital                Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("coordenadas")
+}
+
+model Sintoma {
+  id                      String           @id @default(cuid())
+  hospitalId              String           @map("hospital_id")
+  nome                    String
+  cid                     String?
+  mensagemPredeterminada  String           @map("mensagem_predeterminada") @db.Text
+  hospital                Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  relatorios              RelatoriosFila[]
+  createdAt               DateTime         @default(now()) @map("created_at")
+  updatedAt               DateTime         @updatedAt @map("updated_at")
+
+  @@unique([hospitalId, nome])
+  @@map("sintomas")
+}
+
+model RelatoriosFila {
+  id             String        @id @default(cuid())
+  hospitalId     String        @map("hospital_id")
+  medicoId       String?       @map("medico_id")
+  sintomaId      String?       @map("sintoma_id")
+  pacienteNome   String        @map("paciente_nome")
+  sintomaNome    String?       @map("sintoma_nome")
+  mensagemFinal  String        @map("mensagem_final") @db.Text
+  cid            String?
+  dataRelatorio  DateTime      @default(now()) @map("data_relatorio")
+  status         ReportStatus  @default(PENDENTE)
+  impressoEm     DateTime?     @map("impresso_em")
+  hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  medico         Usuario?      @relation(fields: [medicoId], references: [id], onDelete: SetNull)
+  sintoma        Sintoma?      @relation(fields: [sintomaId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([hospitalId, status])
+  @@map("Relatorios_Fila")
+}
