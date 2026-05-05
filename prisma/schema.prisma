@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -17,33 +16,59 @@ enum ReportStatus {
   CONCLUIDO
 }
 
+enum SubscriptionStatus {
+  PENDING_PAYMENT
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
 model Usuario {
-  id              String         @id @default(cuid())
-  nome            String
-  email           String         @unique
-  senhaHash       String         @map("senha_hash")
-  role            UserRole       @default(MEDICO)
-  hospitalAtualId String?        @map("hospital_atual_id")
-  hospitalAtual   Hospital?      @relation(fields: [hospitalAtualId], references: [id])
-  relatorios      RelatoriosFila[]
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  id                       String              @id @default(cuid())
+  nome                     String
+  login                    String              @unique
+  cpf                      String?             @unique
+  endereco                 String?             @db.Text
+  crm                      String?             @unique
+  email                    String?             @unique
+  pendingEmail             String?             @map("pending_email")
+  emailChangeTokenHash     String?             @unique @map("email_change_token_hash")
+  emailChangeTokenExpiresAt DateTime?          @map("email_change_token_expires_at")
+  senhaHash                String              @map("senha_hash")
+  role                     UserRole            @default(MEDICO)
+  subscriptionStatus       SubscriptionStatus  @default(PENDING_PAYMENT) @map("subscription_status")
+  trialEndsAt              DateTime?           @map("trial_ends_at")
+  mercadoPagoPreapprovalId String?             @unique @map("mercadopago_preapproval_id")
+  mercadoPagoInitPoint     String?             @map("mercadopago_init_point") @db.Text
+  mercadoPagoCardLastFour  String?             @map("mercadopago_card_last_four")
+  mercadoPagoPaymentMethodId String?           @map("mercadopago_payment_method_id")
+  subscriptionStartedAt    DateTime?           @map("subscription_started_at")
+  subscriptionCanceledAt   DateTime?           @map("subscription_canceled_at")
+  hospitalAtualId          String?             @map("hospital_atual_id")
+  hospitalAtual            Hospital?           @relation(fields: [hospitalAtualId], references: [id])
+  relatorios               RelatoriosFila[]
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
 
   @@map("usuarios")
 }
 
 model Hospital {
-  id            String           @id @default(cuid())
-  nome          String           @unique
-  larguraCm     Decimal          @map("largura_cm") @db.Decimal(8, 2)
-  alturaCm      Decimal          @map("altura_cm") @db.Decimal(8, 2)
-  fonteArquivo  String           @map("fonte_arquivo")
+  id            String                @id @default(cuid())
+  nome          String                @unique
+  larguraCm     Decimal               @map("largura_cm") @db.Decimal(8, 2)
+  alturaCm      Decimal               @map("altura_cm") @db.Decimal(8, 2)
+  fonteArquivo  String                @map("fonte_arquivo")
+  carimboImagem String?               @map("carimbo_imagem") @db.Text
   coordenadas   Coordenadas?
-  sintomas      Sintoma[]
   usuarios      Usuario[]
+  sintomas      Sintoma[]
+  cids          Cid[]
+  mensagens     MensagemPredefinida[]
   relatorios    RelatoriosFila[]
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
 
   @@map("hospitais")
 }
@@ -71,18 +96,51 @@ model Coordenadas {
 }
 
 model Sintoma {
-  id                      String           @id @default(cuid())
-  hospitalId              String           @map("hospital_id")
+  id                      String                 @id @default(cuid())
+  hospitalId              String                 @map("hospital_id")
   nome                    String
+  cidId                   String?                @map("cid_id")
   cid                     String?
-  mensagemPredeterminada  String           @map("mensagem_predeterminada") @db.Text
-  hospital                Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  mensagemPredeterminada  String?                @map("mensagem_predeterminada") @db.Text
+  hospital                Hospital               @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  cidPadrao               Cid?                   @relation(fields: [cidId], references: [id], onDelete: SetNull)
+  mensagens               MensagemPredefinida[]
   relatorios              RelatoriosFila[]
-  createdAt               DateTime         @default(now()) @map("created_at")
-  updatedAt               DateTime         @updatedAt @map("updated_at")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  updatedAt               DateTime               @updatedAt @map("updated_at")
 
   @@unique([hospitalId, nome])
+  @@index([cidId])
   @@map("sintomas")
+}
+
+model Cid {
+  id          String    @id @default(cuid())
+  hospitalId  String    @map("hospital_id")
+  codigo      String
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  sintomas    Sintoma[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([hospitalId, codigo])
+  @@map("cids")
+}
+
+model MensagemPredefinida {
+  id          String    @id @default(cuid())
+  hospitalId  String    @map("hospital_id")
+  sintomaId   String?   @map("sintoma_id")
+  titulo      String
+  texto       String    @db.Text
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  sintoma     Sintoma?  @relation(fields: [sintomaId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([hospitalId, titulo])
+  @@index([sintomaId])
+  @@map("mensagens_predefinidas")
 }
 
 model RelatoriosFila {

@@ -1,8 +1,11 @@
-import { PrismaClient, UserRole } from "@prisma/client"
+import "dotenv/config"
+import bcrypt from "bcryptjs"
+import { PrismaClient, SubscriptionStatus, UserRole } from "@prisma/client"
+import { createPrismaPgAdapter } from "../src/lib/prismaAdapter.js"
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({ adapter: createPrismaPgAdapter() })
 
-const coordenadasCasaSantana = {
+const coordenadasPadraoA5 = {
   tituloXcm: 5.5,
   tituloYcm: -3.5,
   corpoXcm: 1.5,
@@ -17,93 +20,148 @@ const coordenadasCasaSantana = {
   carimboYcm: -17.5
 }
 
-const sintomas = [
+const catalogo = [
   {
-    nome: "Dor torácica",
+    sintoma: "Dor toracica",
     cid: "R07.4",
-    mensagemPredeterminada: "Paciente avaliado em consulta clínica, referindo dor torácica inespecífica. Encontra-se orientado, estável e sem sinais de alarme no momento da avaliação. Recomenda-se acompanhamento clínico e retorno em caso de piora dos sintomas."
+    mensagem: "Paciente avaliado em consulta clinica, referindo dor toracica inespecifica. Encontra-se orientado, estavel e sem sinais de alarme no momento da avaliacao. Recomenda-se acompanhamento clinico e retorno em caso de piora dos sintomas."
   },
   {
-    nome: "Cefaleia",
+    sintoma: "Cefaleia",
     cid: "R51",
-    mensagemPredeterminada: "Paciente avaliado por quadro de cefaleia. No momento, apresenta-se em bom estado geral, sem déficits neurológicos focais observados durante o atendimento. Orientado quanto às medidas clínicas e sinais de alerta."
+    mensagem: "Paciente avaliado por quadro de cefaleia. No momento, apresenta-se em bom estado geral, sem deficits neurologicos focais observados durante o atendimento. Orientado quanto as medidas clinicas e sinais de alerta."
   },
   {
-    nome: "Sintomas gripais",
+    sintoma: "Sintomas gripais",
     cid: "J11",
-    mensagemPredeterminada: "Paciente avaliado com sintomas respiratórios leves compatíveis com síndrome gripal. Orientado quanto à hidratação, repouso, medidas sintomáticas e retorno se houver febre persistente, falta de ar ou piora clínica."
+    mensagem: "Paciente avaliado com sintomas respiratorios leves compativeis com sindrome gripal. Orientado quanto a hidratacao, repouso, medidas sintomaticas e retorno se houver febre persistente, falta de ar ou piora clinica."
   }
 ]
 
 async function main() {
+  const medicoSenhaHash = await bcrypt.hash("Medico122*", 12)
+  const adminSenhaHash = await bcrypt.hash("Bolas122*", 12)
+
   const hospital = await prisma.hospital.upsert({
-    where: { nome: "Casa de Saúde Santana" },
+    where: { nome: "Clinica TimbraMed" },
     update: {
-      larguraCm: 14.5,
-      alturaCm: 20.8,
-      fonteArquivo: "Caveat.ttf"
+      larguraCm: 14.8,
+      alturaCm: 21,
+      fonteArquivo: "SourceSerif4.ttf"
     },
     create: {
-      nome: "Casa de Saúde Santana",
-      larguraCm: 14.5,
-      alturaCm: 20.8,
-      fonteArquivo: "Caveat.ttf"
+      nome: "Clinica TimbraMed",
+      larguraCm: 14.8,
+      alturaCm: 21,
+      fonteArquivo: "SourceSerif4.ttf"
     }
   })
 
   await prisma.coordenadas.upsert({
     where: { hospitalId: hospital.id },
-    update: coordenadasCasaSantana,
+    update: coordenadasPadraoA5,
     create: {
       hospitalId: hospital.id,
-      ...coordenadasCasaSantana
+      ...coordenadasPadraoA5
     }
   })
 
-  for (const sintoma of sintomas) {
-    await prisma.sintoma.upsert({
+  for (const item of catalogo) {
+    const cid = await prisma.cid.upsert({
+      where: {
+        hospitalId_codigo: {
+          hospitalId: hospital.id,
+          codigo: item.cid
+        }
+      },
+      update: { codigo: item.cid },
+      create: {
+        hospitalId: hospital.id,
+        codigo: item.cid
+      }
+    })
+
+    const sintoma = await prisma.sintoma.upsert({
       where: {
         hospitalId_nome: {
           hospitalId: hospital.id,
-          nome: sintoma.nome
+          nome: item.sintoma
         }
       },
-      update: sintoma,
+      update: {
+        nome: item.sintoma,
+        cidId: cid.id,
+        cid: null,
+        mensagemPredeterminada: null
+      },
       create: {
         hospitalId: hospital.id,
-        ...sintoma
+        nome: item.sintoma,
+        cidId: cid.id,
+        cid: null,
+        mensagemPredeterminada: null
+      }
+    })
+
+    await prisma.mensagemPredefinida.upsert({
+      where: {
+        hospitalId_titulo: {
+          hospitalId: hospital.id,
+          titulo: item.sintoma
+        }
+      },
+      update: {
+        sintomaId: sintoma.id,
+        titulo: item.sintoma,
+        texto: item.mensagem
+      },
+      create: {
+        hospitalId: hospital.id,
+        sintomaId: sintoma.id,
+        titulo: item.sintoma,
+        texto: item.mensagem
       }
     })
   }
 
   await prisma.usuario.upsert({
-    where: { email: "admin@timbramed.local" },
+    where: { login: "admin" },
     update: {
-      nome: "Administrador TimbraMed",
-      role: UserRole.ADMIN,
+      nome: "Medico TimbraMed",
+      email: "admin@timbramed.local",
+      senhaHash: adminSenhaHash,
+      role: UserRole.MEDICO,
+      subscriptionStatus: SubscriptionStatus.ACTIVE,
       hospitalAtualId: hospital.id
     },
     create: {
-      nome: "Administrador TimbraMed",
+      nome: "Medico TimbraMed",
+      login: "admin",
       email: "admin@timbramed.local",
-      senhaHash: "dev-admin",
-      role: UserRole.ADMIN,
+      senhaHash: adminSenhaHash,
+      role: UserRole.MEDICO,
+      subscriptionStatus: SubscriptionStatus.ACTIVE,
       hospitalAtualId: hospital.id
     }
   })
 
   await prisma.usuario.upsert({
-    where: { email: "medico@timbramed.local" },
+    where: { login: "medico@timbramed.local" },
     update: {
       nome: "Dr. FSA",
+      email: "medico@timbramed.local",
+      senhaHash: medicoSenhaHash,
       role: UserRole.MEDICO,
+      subscriptionStatus: SubscriptionStatus.ACTIVE,
       hospitalAtualId: hospital.id
     },
     create: {
       nome: "Dr. FSA",
+      login: "medico@timbramed.local",
       email: "medico@timbramed.local",
-      senhaHash: "dev-medico",
+      senhaHash: medicoSenhaHash,
       role: UserRole.MEDICO,
+      subscriptionStatus: SubscriptionStatus.ACTIVE,
       hospitalAtualId: hospital.id
     }
   })

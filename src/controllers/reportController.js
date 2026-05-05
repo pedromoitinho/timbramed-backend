@@ -5,20 +5,20 @@ import { normalizeReport } from "../utils/serializers.js"
 
 const createReportSchema = z.object({
   hospitalId: z.string().min(1),
-  medicoId: z.string().optional().nullable(),
   sintomaId: z.string().optional().nullable(),
-  pacienteNome: z.string().min(2),
-  mensagemFinal: z.string().min(5),
-  cid: z.string().optional().nullable()
+  pacienteNome: z.string().trim().min(2).max(120),
+  mensagemFinal: z.string().trim().min(5).max(4000),
+  cid: z.string().trim().max(16).optional().nullable()
 })
 
 export async function listReports(req, res, next) {
   try {
     const status = req.query.status && Object.values(ReportStatus).includes(req.query.status) ? req.query.status : undefined
-    const hospitalId = req.query.hospitalId ? String(req.query.hospitalId) : undefined
+    const requestedHospitalId = req.query.hospitalId ? String(req.query.hospitalId) : undefined
+    const hospitalId = req.user.role === "MEDICO" ? req.user.hospitalAtualId : requestedHospitalId
     const reports = await prisma.relatoriosFila.findMany({
       where: {
-        hospitalId,
+        hospitalId: hospitalId || undefined,
         status
       },
       orderBy: { createdAt: "desc" }
@@ -33,19 +33,34 @@ export async function listReports(req, res, next) {
 export async function createReport(req, res, next) {
   try {
     const payload = createReportSchema.parse(req.body)
+    const hospitalId = req.user.role === "MEDICO" ? req.user.hospitalAtualId : payload.hospitalId
+
+    if (!hospitalId) {
+      res.status(400).json({ message: "Medico sem hospital atual configurado" })
+      return
+    }
+
+    if (req.user.role === "MEDICO" && payload.hospitalId !== hospitalId) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
     const symptom = payload.sintomaId
-      ? await prisma.sintoma.findUnique({ where: { id: payload.sintomaId } })
+      ? await prisma.sintoma.findFirst({
+          where: { id: payload.sintomaId, hospitalId },
+          include: { cidPadrao: true }
+        })
       : null
 
     const report = await prisma.relatoriosFila.create({
       data: {
-        hospitalId: payload.hospitalId,
-        medicoId: payload.medicoId || null,
+        hospitalId,
+        medicoId: req.user.id,
         sintomaId: payload.sintomaId || null,
         pacienteNome: payload.pacienteNome,
         sintomaNome: symptom?.nome || null,
         mensagemFinal: payload.mensagemFinal,
-        cid: payload.cid || symptom?.cid || null,
+        cid: payload.cid || symptom?.cidPadrao?.codigo || symptom?.cid || null,
         status: ReportStatus.PENDENTE
       }
     })
@@ -65,10 +80,9 @@ export async function completeReports(ids) {
     where: {
       id: { in: ids }
     },
-    data: {
-      status: ReportStatus.CONCLUIDO,
-      impressoEm: new Date()
-    }
+      data: {
+        status: ReportStatus.CONCLUIDO,
+        impressoEm: new Date()
+      }
   })
 }
-

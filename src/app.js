@@ -1,14 +1,36 @@
 import express from "express"
 import cors from "cors"
 import { ZodError } from "zod"
+import { applySecurityHeaders, createCorsOriginValidator } from "./middlewares/securityMiddleware.js"
 import { router } from "./routes/index.js"
 
 export const app = express()
+const allowOrigin = createCorsOriginValidator()
 
-const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : true
+app.disable("x-powered-by")
 
-app.use(cors({ origin: corsOrigin }))
-app.use(express.json({ limit: "2mb" }))
+if (process.env.TRUST_PROXY === "1") {
+  app.set("trust proxy", 1)
+}
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (allowOrigin(origin)) {
+      callback(null, true)
+      return
+    }
+
+    callback(new Error("Origem não permitida pelo CORS"))
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false
+}
+
+app.use(cors(corsOptions))
+app.options("*", cors(corsOptions))
+app.use(applySecurityHeaders)
+app.use(express.json({ limit: "10mb" }))
 app.use(router)
 
 app.use((req, res) => {
@@ -31,5 +53,12 @@ app.use((error, req, res, next) => {
     return
   }
 
-  res.status(500).json({ message: error.message || "Erro interno" })
+  if (error.message === "Origem não permitida pelo CORS") {
+    res.status(403).json({ message: error.message })
+    return
+  }
+
+  const internalMessage = error.message || "Erro interno"
+  const responseMessage = process.env.NODE_ENV === "production" ? "Erro interno" : internalMessage
+  res.status(500).json({ message: responseMessage })
 })

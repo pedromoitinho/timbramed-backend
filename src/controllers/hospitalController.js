@@ -2,36 +2,54 @@ import { z } from "zod"
 import { prisma } from "../lib/prisma.js"
 
 const coordinatesSchema = z.object({
-  tituloXcm: z.coerce.number(),
-  tituloYcm: z.coerce.number(),
-  corpoXcm: z.coerce.number(),
-  corpoYcm: z.coerce.number(),
-  corpoMaxXcm: z.coerce.number(),
-  corpoLimiteInferiorYcm: z.coerce.number(),
-  cidXcm: z.coerce.number(),
-  cidYcm: z.coerce.number(),
-  encerramentoXcm: z.coerce.number(),
-  encerramentoYcm: z.coerce.number(),
-  carimboXcm: z.coerce.number(),
-  carimboYcm: z.coerce.number()
+  tituloXcm: z.coerce.number().min(0).max(14.8),
+  tituloYcm: z.coerce.number().min(-21).max(0),
+  corpoXcm: z.coerce.number().min(0).max(14.8),
+  corpoYcm: z.coerce.number().min(-21).max(0),
+  corpoMaxXcm: z.coerce.number().min(0).max(14.8),
+  corpoLimiteInferiorYcm: z.coerce.number().min(-21).max(0),
+  cidXcm: z.coerce.number().min(0).max(14.8),
+  cidYcm: z.coerce.number().min(-21).max(0),
+  encerramentoXcm: z.coerce.number().min(0).max(14.8),
+  encerramentoYcm: z.coerce.number().min(-21).max(0),
+  carimboXcm: z.coerce.number().min(0).max(14.8),
+  carimboYcm: z.coerce.number().min(-21).max(0)
+}).superRefine((value, context) => {
+  if (value.corpoMaxXcm <= value.corpoXcm) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["corpoMaxXcm"],
+      message: "corpoMaxXcm deve ser maior que corpoXcm"
+    })
+  }
+
+  if (value.corpoLimiteInferiorYcm >= value.corpoYcm) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["corpoLimiteInferiorYcm"],
+      message: "corpoLimiteInferiorYcm deve ficar abaixo de corpoYcm"
+    })
+  }
 })
 
-const hospitalSchema = z.object({
-  nome: z.string().min(2),
-  larguraCm: z.coerce.number().positive(),
-  alturaCm: z.coerce.number().positive(),
-  fonteArquivo: z.string().min(5),
-  coordenadas: coordinatesSchema
+const stampSchema = z.object({
+  carimboImagem: z.string().startsWith("data:image/png;base64,").max(8000000).nullable()
 })
+
+function canAccessHospital(req, hospitalId) {
+  return req.user.hospitalAtualId === hospitalId || req.user.role === "ADMIN"
+}
 
 export async function listHospitals(req, res, next) {
   try {
+    const where = req.user.hospitalAtualId ? { id: req.user.hospitalAtualId } : undefined
     const hospitals = await prisma.hospital.findMany({
+      where,
       include: {
         coordenadas: true,
-        sintomas: {
-          orderBy: { nome: "asc" }
-        }
+        sintomas: { orderBy: { nome: "asc" } },
+        cids: { orderBy: { codigo: "asc" } },
+        mensagens: { orderBy: { createdAt: "asc" } }
       },
       orderBy: { nome: "asc" }
     })
@@ -44,18 +62,23 @@ export async function listHospitals(req, res, next) {
 
 export async function getHospital(req, res, next) {
   try {
+    if (!canAccessHospital(req, req.params.id)) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
     const hospital = await prisma.hospital.findUnique({
       where: { id: req.params.id },
       include: {
         coordenadas: true,
-        sintomas: {
-          orderBy: { nome: "asc" }
-        }
+        sintomas: { orderBy: { nome: "asc" } },
+        cids: { orderBy: { codigo: "asc" } },
+        mensagens: { orderBy: { createdAt: "asc" } }
       }
     })
 
     if (!hospital) {
-      res.status(404).json({ message: "Hospital não encontrado" })
+      res.status(404).json({ message: "Hospital nao encontrado" })
       return
     }
 
@@ -65,49 +88,47 @@ export async function getHospital(req, res, next) {
   }
 }
 
-export async function createHospital(req, res, next) {
+export async function updateHospitalCoordinates(req, res, next) {
   try {
-    const payload = hospitalSchema.parse(req.body)
-    const hospital = await prisma.hospital.create({
-      data: {
-        nome: payload.nome,
-        larguraCm: payload.larguraCm,
-        alturaCm: payload.alturaCm,
-        fonteArquivo: payload.fonteArquivo,
-        coordenadas: {
-          create: payload.coordenadas
-        }
+    if (!canAccessHospital(req, req.params.id)) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
+    const payload = coordinatesSchema.parse(req.body)
+    const coordinates = await prisma.coordenadas.upsert({
+      where: { hospitalId: req.params.id },
+      create: {
+        hospitalId: req.params.id,
+        ...payload
       },
-      include: {
-        coordenadas: true
-      }
+      update: payload
     })
 
-    res.status(201).json(hospital)
+    res.json(coordinates)
   } catch (error) {
     next(error)
   }
 }
 
-export async function updateHospital(req, res, next) {
+export async function updateHospitalStamp(req, res, next) {
   try {
-    const payload = hospitalSchema.parse(req.body)
+    if (!canAccessHospital(req, req.params.id)) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
+    const payload = stampSchema.parse(req.body)
     const hospital = await prisma.hospital.update({
       where: { id: req.params.id },
       data: {
-        nome: payload.nome,
-        larguraCm: payload.larguraCm,
-        alturaCm: payload.alturaCm,
-        fonteArquivo: payload.fonteArquivo,
-        coordenadas: {
-          upsert: {
-            create: payload.coordenadas,
-            update: payload.coordenadas
-          }
-        }
+        carimboImagem: payload.carimboImagem
       },
       include: {
-        coordenadas: true
+        coordenadas: true,
+        sintomas: { orderBy: { nome: "asc" } },
+        cids: { orderBy: { codigo: "asc" } },
+        mensagens: { orderBy: { createdAt: "asc" } }
       }
     })
 

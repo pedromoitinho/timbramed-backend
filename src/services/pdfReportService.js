@@ -7,11 +7,14 @@ import { cartesianYToPdfPt, cmToPt, heightFromCartesianRange, widthFromCartesian
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const fontsDirectory = path.resolve(__dirname, "../../assets/fonts")
-const inkColor = "#1E1E8C"
-const handwritingFontSize = 19
+const inkColor = "#111111"
+const bodyFontSize = 12.5
+const titleFontSize = 13.5
+const a5PageCm = { width: 14.8, height: 21 }
+const a5PageSize = [cmToPt(a5PageCm.width), cmToPt(a5PageCm.height)]
 
 function resolveFontPath(fontFileName) {
-  const safeFontFileName = path.basename(fontFileName)
+  const safeFontFileName = path.basename(fontFileName || "SourceSerif4.ttf")
   return path.join(fontsDirectory, safeFontFileName)
 }
 
@@ -26,6 +29,16 @@ function buildBodyText(patient) {
   return [`Paciente: ${patientName}`, "", message].filter(Boolean).join("\n")
 }
 
+function dataUrlToBuffer(value) {
+  const parts = String(value || "").split(",")
+
+  if (parts.length < 2) {
+    return null
+  }
+
+  return Buffer.from(parts[1], "base64")
+}
+
 function drawPatientReport(doc, hospital, patient) {
   const coordinates = hospital.coordenadas
   const bodyWidth = widthFromCartesianRange(coordinates.corpoXcm, coordinates.corpoMaxXcm)
@@ -34,19 +47,20 @@ function drawPatientReport(doc, hospital, patient) {
   const closingText = `Atenciosamente,\nFSA ${dateLabel}`
   const stampText = patient.medicoNome || "Dr. FSA"
   const cidText = patient.cid ? `CID: ${patient.cid}` : "CID:"
-  const closingWidth = cmToPt(Number(hospital.larguraCm) - Number(coordinates.encerramentoXcm))
-  const stampWidth = cmToPt(Number(hospital.larguraCm) - Number(coordinates.carimboXcm))
+  const closingWidth = cmToPt(a5PageCm.width - Number(coordinates.encerramentoXcm))
+  const stampWidth = cmToPt(a5PageCm.width - Number(coordinates.carimboXcm))
+  const stampBuffer = dataUrlToBuffer(hospital.carimboImagem)
 
-  doc.font("hospital-font").fillColor(inkColor).fontSize(handwritingFontSize)
+  doc.font("hospital-font").fillColor(inkColor)
 
-  doc.text("RELATÓRIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
+  doc.fontSize(titleFontSize).text("RELATORIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
     lineBreak: false
   })
 
-  doc.text(buildBodyText(patient), cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
+  doc.fontSize(bodyFontSize).text(buildBodyText(patient), cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
     width: bodyWidth,
     height: bodyHeight,
-    lineGap: 2
+    lineGap: 3
   })
 
   doc.text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
@@ -55,8 +69,19 @@ function drawPatientReport(doc, hospital, patient) {
 
   doc.text(closingText, cmToPt(coordinates.encerramentoXcm), cartesianYToPdfPt(coordinates.encerramentoYcm), {
     width: closingWidth,
-    lineGap: 1
+    lineGap: 2
   })
+
+  if (stampBuffer) {
+    try {
+      doc.image(stampBuffer, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
+        fit: [stampWidth, cmToPt(2.4)]
+      })
+      return
+    } catch {
+      doc.font("hospital-font").fillColor(inkColor)
+    }
+  }
 
   doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
     width: stampWidth,
@@ -72,14 +97,14 @@ export function createBatchReportPdf({ hospital, patients }) {
     }
 
     if (!Array.isArray(patients) || patients.length === 0) {
-      reject(new Error("Nenhum paciente recebido para impressão"))
+      reject(new Error("Nenhum paciente recebido para impressao"))
       return
     }
 
     const fontPath = resolveFontPath(hospital.fonteArquivo)
 
     if (!fs.existsSync(fontPath)) {
-      reject(new Error(`Fonte customizada não encontrada: ${hospital.fonteArquivo}`))
+      reject(new Error(`Fonte customizada nao encontrada: ${hospital.fonteArquivo}`))
       return
     }
 
@@ -87,7 +112,7 @@ export function createBatchReportPdf({ hospital, patients }) {
     const doc = new PDFDocument({
       autoFirstPage: false,
       margin: 0,
-      size: [cmToPt(hospital.larguraCm), cmToPt(hospital.alturaCm)]
+      size: a5PageSize
     })
 
     doc.on("data", chunk => chunks.push(chunk))
