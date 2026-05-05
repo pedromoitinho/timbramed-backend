@@ -7,7 +7,7 @@ const createReportSchema = z.object({
   hospitalId: z.string().min(1),
   pacienteNome: z.string().trim().min(2).max(120),
   mensagemFinal: z.string().trim().min(5).max(4000),
-  cid: z.string().trim().max(16).optional().nullable()
+  cid: z.string().trim().max(120).optional().nullable()
 })
 
 export async function listReports(req, res, next) {
