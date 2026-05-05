@@ -2,7 +2,7 @@ import { Router } from "express"
 import { login, me, register } from "../controllers/authController.js"
 import { cancelUserSubscription, getBillingStatus, mercadoPagoWebhook, startSubscription, subscribeWithCard } from "../controllers/billingController.js"
 import { createCid, deleteCid, listMedicalCatalog, updateCid } from "../controllers/catalogController.js"
-import { getHospital, listHospitals, updateHospitalCoordinates, updateHospitalStamp } from "../controllers/hospitalController.js"
+import { getHospital, listHospitals, updateHospitalCoordinates, updateHospitalReport, updateHospitalStamp } from "../controllers/hospitalController.js"
 import { confirmEmailChange, getProfile, updateProfile } from "../controllers/profileController.js"
 import { createReport, listReports } from "../controllers/reportController.js"
 import { generatePdf } from "../controllers/pdfController.js"
@@ -34,6 +34,7 @@ router.get("/hospitals", requireAuth, requireProductAccess, listHospitals)
 router.get("/hospitals/:id", requireAuth, requireProductAccess, getHospital)
 router.put("/hospitals/:id/coordinates", requireAuth, requireProductAccess, updateHospitalCoordinates)
 router.put("/hospitals/:id/stamp", requireAuth, requireProductAccess, updateHospitalStamp)
+router.put("/hospitals/:id/report", requireAuth, requireProductAccess, updateHospitalReport)
 router.get("/hospitals/:hospitalId/catalog", requireAuth, requireProductAccess, listMedicalCatalog)
 router.post("/hospitals/:hospitalId/cids", requireAuth, requireProductAccess, createCid)
 router.put("/cids/:id", requireAuth, requireProductAccess, updateCid)

@@ -16,7 +16,8 @@ const patientSchema = z.object({
 
 const generatePdfSchema = z.object({
   hospitalId: z.string().min(1),
-  pacientes: z.array(patientSchema).min(1)
+  pacientes: z.array(patientSchema).min(1),
+  comRelatorio: z.boolean().optional().default(false)
 })
 
 export async function generatePdf(req, res, next) {
@@ -51,7 +52,7 @@ export async function generatePdf(req, res, next) {
       medicoNome: patient.medicoNome || req.user.nome
     }))
 
-    const pdf = await createBatchReportPdf({ hospital, patients })
+    const pdf = await createBatchReportPdf({ hospital, patients, comRelatorio: payload.comRelatorio })
     const reportIds = patients.map(patient => patient.id).filter(Boolean)
 
     await completeReports(reportIds)

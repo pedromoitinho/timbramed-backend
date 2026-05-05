@@ -61,6 +61,7 @@ model Hospital {
   alturaCm      Decimal               @map("altura_cm") @db.Decimal(8, 2)
   fonteArquivo  String                @map("fonte_arquivo")
   carimboImagem String?               @map("carimbo_imagem") @db.Text
+  relatorioImagem String?             @map("relatorio_imagem") @db.Text
   coordenadas   Coordenadas?
   usuarios      Usuario[]
   cids          Cid[]

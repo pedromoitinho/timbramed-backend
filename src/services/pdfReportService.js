@@ -39,6 +39,26 @@ function dataUrlToBuffer(value) {
   return Buffer.from(parts[1], "base64")
 }
 
+function drawBackgroundIfNeeded(doc, hospital) {
+  if (!hospital.relatorioImagem) {
+    return
+  }
+
+  const buffer = dataUrlToBuffer(hospital.relatorioImagem)
+
+  if (!buffer) {
+    return
+  }
+
+  try {
+    doc.image(buffer, 0, 0, {
+      width: a5PageSize[0],
+      height: a5PageSize[1]
+    })
+  } catch {
+  }
+}
+
 function drawPatientReport(doc, hospital, patient) {
   const coordinates = hospital.coordenadas
   const bodyWidth = widthFromCartesianRange(coordinates.corpoXcm, coordinates.corpoMaxXcm)
@@ -89,7 +109,7 @@ function drawPatientReport(doc, hospital, patient) {
   })
 }
 
-export function createBatchReportPdf({ hospital, patients }) {
+export function createBatchReportPdf({ hospital, patients, comRelatorio }) {
   return new Promise((resolve, reject) => {
     if (!hospital?.coordenadas) {
       reject(new Error("Hospital sem coordenadas configuradas"))
@@ -124,6 +144,10 @@ export function createBatchReportPdf({ hospital, patients }) {
     patients.forEach((patient, index) => {
       if (index === 0) {
         doc.addPage()
+      }
+
+      if (comRelatorio) {
+        drawBackgroundIfNeeded(doc, hospital)
       }
 
       drawPatientReport(doc, hospital, patient)
