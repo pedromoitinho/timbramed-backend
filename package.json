@@ -6,7 +6,9 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
+    "prestart": "prisma generate",
     "start": "node src/server.js",
+    "heroku-postbuild": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed": "prisma db seed"
@@ -21,16 +23,16 @@
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.15.2",
     "pg": "^8.20.0",
+    "prisma": "^7.8.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9",
-    "prisma": "^7.8.0"
+    "nodemon": "^3.1.9"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   }
 }

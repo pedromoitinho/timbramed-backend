@@ -13,6 +13,7 @@ function parseAllowedOrigins() {
   const entries = new Set([
     process.env.APP_URL,
     process.env.FRONTEND_URL,
+    "https://timbramed-frontend.pages.dev",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
   ])
