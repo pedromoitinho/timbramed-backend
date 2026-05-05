@@ -40,6 +40,10 @@ const reportImageSchema = z.object({
   relatorioImagem: z.string().startsWith("data:").max(16000000).nullable()
 })
 
+const signatureSchema = z.object({
+  assinaturaImagem: z.string().startsWith("data:image/png;base64,").max(8000000).nullable()
+})
+
 function canAccessHospital(req, hospitalId) {
   return req.user.hospitalAtualId === hospitalId || req.user.role === "ADMIN"
 }
@@ -148,6 +152,31 @@ export async function updateHospitalReport(req, res, next) {
       where: { id: req.params.id },
       data: {
         relatorioImagem: payload.relatorioImagem
+      },
+      include: {
+        coordenadas: true,
+        cids: { orderBy: { codigo: "asc" } }
+      }
+    })
+
+    res.json(hospital)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateHospitalSignature(req, res, next) {
+  try {
+    if (!canAccessHospital(req, req.params.id)) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
+    const payload = signatureSchema.parse(req.body)
+    const hospital = await prisma.hospital.update({
+      where: { id: req.params.id },
+      data: {
+        assinaturaImagem: payload.assinaturaImagem
       },
       include: {
         coordenadas: true,

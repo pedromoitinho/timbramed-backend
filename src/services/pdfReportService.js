@@ -70,6 +70,7 @@ function drawPatientReport(doc, hospital, patient) {
   const closingWidth = cmToPt(a5PageCm.width - Number(coordinates.encerramentoXcm))
   const stampWidth = cmToPt(a5PageCm.width - Number(coordinates.carimboXcm))
   const stampBuffer = dataUrlToBuffer(hospital.carimboImagem)
+  const signatureBuffer = dataUrlToBuffer(hospital.assinaturaImagem)
 
   doc.font("hospital-font").fillColor(inkColor)
 
@@ -97,16 +98,28 @@ function drawPatientReport(doc, hospital, patient) {
       doc.image(stampBuffer, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
         fit: [stampWidth, cmToPt(2.4)]
       })
-      return
     } catch {
       doc.font("hospital-font").fillColor(inkColor)
+      doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
+        width: stampWidth,
+        align: "center"
+      })
     }
+  } else {
+    doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
+      width: stampWidth,
+      align: "center"
+    })
   }
 
-  doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
-    width: stampWidth,
-    align: "center"
-  })
+  if (signatureBuffer) {
+    try {
+      doc.image(signatureBuffer, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
+        fit: [stampWidth, cmToPt(2.4)]
+      })
+    } catch {
+    }
+  }
 }
 
 export function createBatchReportPdf({ hospital, patients, comRelatorio }) {
