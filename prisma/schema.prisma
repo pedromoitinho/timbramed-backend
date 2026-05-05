@@ -63,9 +63,7 @@ model Hospital {
   carimboImagem String?               @map("carimbo_imagem") @db.Text
   coordenadas   Coordenadas?
   usuarios      Usuario[]
-  sintomas      Sintoma[]
   cids          Cid[]
-  mensagens     MensagemPredefinida[]
   relatorios    RelatoriosFila[]
   createdAt     DateTime              @default(now()) @map("created_at")
   updatedAt     DateTime              @updatedAt @map("updated_at")
@@ -95,31 +93,11 @@ model Coordenadas {
   @@map("coordenadas")
 }
 
-model Sintoma {
-  id                      String                 @id @default(cuid())
-  hospitalId              String                 @map("hospital_id")
-  nome                    String
-  cidId                   String?                @map("cid_id")
-  cid                     String?
-  mensagemPredeterminada  String?                @map("mensagem_predeterminada") @db.Text
-  hospital                Hospital               @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  cidPadrao               Cid?                   @relation(fields: [cidId], references: [id], onDelete: SetNull)
-  mensagens               MensagemPredefinida[]
-  relatorios              RelatoriosFila[]
-  createdAt               DateTime               @default(now()) @map("created_at")
-  updatedAt               DateTime               @updatedAt @map("updated_at")
-
-  @@unique([hospitalId, nome])
-  @@index([cidId])
-  @@map("sintomas")
-}
-
 model Cid {
   id          String    @id @default(cuid())
   hospitalId  String    @map("hospital_id")
   codigo      String
   hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  sintomas    Sintoma[]
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
@@ -127,29 +105,11 @@ model Cid {
   @@map("cids")
 }
 
-model MensagemPredefinida {
-  id          String    @id @default(cuid())
-  hospitalId  String    @map("hospital_id")
-  sintomaId   String?   @map("sintoma_id")
-  titulo      String
-  texto       String    @db.Text
-  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  sintoma     Sintoma?  @relation(fields: [sintomaId], references: [id], onDelete: SetNull)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  @@unique([hospitalId, titulo])
-  @@index([sintomaId])
-  @@map("mensagens_predefinidas")
-}
-
 model RelatoriosFila {
   id             String        @id @default(cuid())
   hospitalId     String        @map("hospital_id")
   medicoId       String?       @map("medico_id")
-  sintomaId      String?       @map("sintoma_id")
   pacienteNome   String        @map("paciente_nome")
-  sintomaNome    String?       @map("sintoma_nome")
   mensagemFinal  String        @map("mensagem_final") @db.Text
   cid            String?
   dataRelatorio  DateTime      @default(now()) @map("data_relatorio")
@@ -157,7 +117,6 @@ model RelatoriosFila {
   impressoEm     DateTime?     @map("impresso_em")
   hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   medico         Usuario?      @relation(fields: [medicoId], references: [id], onDelete: SetNull)
-  sintoma        Sintoma?      @relation(fields: [sintomaId], references: [id], onDelete: SetNull)
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 

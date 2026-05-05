@@ -20,23 +20,7 @@ const coordenadasPadraoA5 = {
   carimboYcm: -17.5
 }
 
-const catalogo = [
-  {
-    sintoma: "Dor toracica",
-    cid: "R07.4",
-    mensagem: "Paciente avaliado em consulta clinica, referindo dor toracica inespecifica. Encontra-se orientado, estavel e sem sinais de alarme no momento da avaliacao. Recomenda-se acompanhamento clinico e retorno em caso de piora dos sintomas."
-  },
-  {
-    sintoma: "Cefaleia",
-    cid: "R51",
-    mensagem: "Paciente avaliado por quadro de cefaleia. No momento, apresenta-se em bom estado geral, sem deficits neurologicos focais observados durante o atendimento. Orientado quanto as medidas clinicas e sinais de alerta."
-  },
-  {
-    sintoma: "Sintomas gripais",
-    cid: "J11",
-    mensagem: "Paciente avaliado com sintomas respiratorios leves compativeis com sindrome gripal. Orientado quanto a hidratacao, repouso, medidas sintomaticas e retorno se houver febre persistente, falta de ar ou piora clinica."
-  }
-]
+const cidsIniciais = ["R07.4", "R51", "J11"]
 
 async function main() {
   const medicoSenhaHash = await bcrypt.hash("Medico122*", 12)
@@ -66,60 +50,18 @@ async function main() {
     }
   })
 
-  for (const item of catalogo) {
-    const cid = await prisma.cid.upsert({
+  for (const codigo of cidsIniciais) {
+    await prisma.cid.upsert({
       where: {
         hospitalId_codigo: {
           hospitalId: hospital.id,
-          codigo: item.cid
+          codigo
         }
       },
-      update: { codigo: item.cid },
+      update: { codigo },
       create: {
         hospitalId: hospital.id,
-        codigo: item.cid
-      }
-    })
-
-    const sintoma = await prisma.sintoma.upsert({
-      where: {
-        hospitalId_nome: {
-          hospitalId: hospital.id,
-          nome: item.sintoma
-        }
-      },
-      update: {
-        nome: item.sintoma,
-        cidId: cid.id,
-        cid: null,
-        mensagemPredeterminada: null
-      },
-      create: {
-        hospitalId: hospital.id,
-        nome: item.sintoma,
-        cidId: cid.id,
-        cid: null,
-        mensagemPredeterminada: null
-      }
-    })
-
-    await prisma.mensagemPredefinida.upsert({
-      where: {
-        hospitalId_titulo: {
-          hospitalId: hospital.id,
-          titulo: item.sintoma
-        }
-      },
-      update: {
-        sintomaId: sintoma.id,
-        titulo: item.sintoma,
-        texto: item.mensagem
-      },
-      create: {
-        hospitalId: hospital.id,
-        sintomaId: sintoma.id,
-        titulo: item.sintoma,
-        texto: item.mensagem
+        codigo
       }
     })
   }

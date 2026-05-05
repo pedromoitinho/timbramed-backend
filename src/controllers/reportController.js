@@ -5,7 +5,6 @@ import { normalizeReport } from "../utils/serializers.js"
 
 const createReportSchema = z.object({
   hospitalId: z.string().min(1),
-  sintomaId: z.string().optional().nullable(),
   pacienteNome: z.string().trim().min(2).max(120),
   mensagemFinal: z.string().trim().min(5).max(4000),
   cid: z.string().trim().max(16).optional().nullable()
@@ -45,22 +44,13 @@ export async function createReport(req, res, next) {
       return
     }
 
-    const symptom = payload.sintomaId
-      ? await prisma.sintoma.findFirst({
-          where: { id: payload.sintomaId, hospitalId },
-          include: { cidPadrao: true }
-        })
-      : null
-
     const report = await prisma.relatoriosFila.create({
       data: {
         hospitalId,
         medicoId: req.user.id,
-        sintomaId: payload.sintomaId || null,
         pacienteNome: payload.pacienteNome,
-        sintomaNome: symptom?.nome || null,
         mensagemFinal: payload.mensagemFinal,
-        cid: payload.cid || symptom?.cidPadrao?.codigo || symptom?.cid || null,
+        cid: payload.cid || null,
         status: ReportStatus.PENDENTE
       }
     })

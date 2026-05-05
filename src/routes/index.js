@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { login, me, register } from "../controllers/authController.js"
 import { cancelUserSubscription, getBillingStatus, mercadoPagoWebhook, startSubscription, subscribeWithCard } from "../controllers/billingController.js"
-import { createCid, createMessage, createSymptom, deleteCid, deleteMessage, deleteSymptom, listMedicalCatalog, updateCid, updateMessage, updateSymptom } from "../controllers/catalogController.js"
+import { createCid, deleteCid, listMedicalCatalog, updateCid } from "../controllers/catalogController.js"
 import { getHospital, listHospitals, updateHospitalCoordinates, updateHospitalStamp } from "../controllers/hospitalController.js"
 import { confirmEmailChange, getProfile, updateProfile } from "../controllers/profileController.js"
 import { createReport, listReports } from "../controllers/reportController.js"
@@ -35,15 +35,9 @@ router.get("/hospitals/:id", requireAuth, requireProductAccess, getHospital)
 router.put("/hospitals/:id/coordinates", requireAuth, requireProductAccess, updateHospitalCoordinates)
 router.put("/hospitals/:id/stamp", requireAuth, requireProductAccess, updateHospitalStamp)
 router.get("/hospitals/:hospitalId/catalog", requireAuth, requireProductAccess, listMedicalCatalog)
-router.post("/hospitals/:hospitalId/symptoms", requireAuth, requireProductAccess, createSymptom)
-router.put("/symptoms/:id", requireAuth, requireProductAccess, updateSymptom)
-router.delete("/symptoms/:id", requireAuth, requireProductAccess, deleteSymptom)
 router.post("/hospitals/:hospitalId/cids", requireAuth, requireProductAccess, createCid)
 router.put("/cids/:id", requireAuth, requireProductAccess, updateCid)
 router.delete("/cids/:id", requireAuth, requireProductAccess, deleteCid)
-router.post("/hospitals/:hospitalId/messages", requireAuth, requireProductAccess, createMessage)
-router.put("/messages/:id", requireAuth, requireProductAccess, updateMessage)
-router.delete("/messages/:id", requireAuth, requireProductAccess, deleteMessage)
 router.get("/reports", requireAuth, requireProductAccess, listReports)
 router.post("/reports", requireAuth, requireProductAccess, createReport)
 router.post("/generate-pdf", requireAuth, requireProductAccess, generatePdf)

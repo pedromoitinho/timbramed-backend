@@ -47,9 +47,7 @@ export async function listHospitals(req, res, next) {
       where,
       include: {
         coordenadas: true,
-        sintomas: { orderBy: { nome: "asc" } },
-        cids: { orderBy: { codigo: "asc" } },
-        mensagens: { orderBy: { createdAt: "asc" } }
+        cids: { orderBy: { codigo: "asc" } }
       },
       orderBy: { nome: "asc" }
     })
@@ -71,9 +69,7 @@ export async function getHospital(req, res, next) {
       where: { id: req.params.id },
       include: {
         coordenadas: true,
-        sintomas: { orderBy: { nome: "asc" } },
-        cids: { orderBy: { codigo: "asc" } },
-        mensagens: { orderBy: { createdAt: "asc" } }
+        cids: { orderBy: { codigo: "asc" } }
       }
     })
 
@@ -126,9 +122,7 @@ export async function updateHospitalStamp(req, res, next) {
       },
       include: {
         coordenadas: true,
-        sintomas: { orderBy: { nome: "asc" } },
-        cids: { orderBy: { codigo: "asc" } },
-        mensagens: { orderBy: { createdAt: "asc" } }
+        cids: { orderBy: { codigo: "asc" } }
       }
     })
 

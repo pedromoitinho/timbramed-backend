@@ -6,8 +6,6 @@ import { completeReports } from "./reportController.js"
 const patientSchema = z.object({
   id: z.string().optional().nullable(),
   pacienteNome: z.string().trim().min(2).max(120),
-  sintomaId: z.string().optional().nullable(),
-  sintomaNome: z.string().trim().max(120).optional().nullable(),
   mensagemFinal: z.string().trim().max(4000).optional(),
   mensagem: z.string().trim().max(4000).optional(),
   cid: z.string().trim().max(16).optional().nullable(),
