@@ -39,6 +39,17 @@ function dataUrlToBuffer(value) {
   return Buffer.from(parts[1], "base64")
 }
 
+function computeBodyFontSize(doc, text, width, maxHeight) {
+  let size = bodyFontSize
+  while (size >= 7) {
+    doc.fontSize(size)
+    const h = doc.heightOfString(text, { width, lineGap: 3 })
+    if (h <= maxHeight) return size
+    size -= 0.5
+  }
+  return 7
+}
+
 function drawBackgroundIfNeeded(doc, hospital) {
   if (!hospital.relatorioImagem) {
     return
@@ -74,21 +85,24 @@ function drawPatientReport(doc, hospital, patient) {
 
   doc.font("hospital-font").fillColor(inkColor)
 
-  doc.fontSize(titleFontSize).text("RELATORIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
+  doc.fontSize(titleFontSize).text("RELATÓRIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
     lineBreak: false
   })
 
-  doc.fontSize(bodyFontSize).text(buildBodyText(patient), cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
+  const bodyText = buildBodyText(patient)
+  const bodyFontSizeFinal = computeBodyFontSize(doc, bodyText, bodyWidth, bodyHeight)
+
+  doc.fontSize(bodyFontSizeFinal).text(bodyText, cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
     width: bodyWidth,
     height: bodyHeight,
     lineGap: 3
   })
 
-  doc.text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
+  doc.fontSize(bodyFontSize).text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
     lineBreak: false
   })
 
-  doc.text(closingText, cmToPt(coordinates.encerramentoXcm), cartesianYToPdfPt(coordinates.encerramentoYcm), {
+  doc.fontSize(bodyFontSize).text(closingText, cmToPt(coordinates.encerramentoXcm), cartesianYToPdfPt(coordinates.encerramentoYcm), {
     width: closingWidth,
     lineGap: 2
   })
