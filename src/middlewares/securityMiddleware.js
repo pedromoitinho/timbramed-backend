@@ -51,7 +51,7 @@ export function applySecurityHeaders(req, res, next) {
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none")
   res.setHeader("Referrer-Policy", "no-referrer")
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-  res.setHeader("Cross-Origin-Resource-Policy", "same-site")
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin")
   res.setHeader("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
