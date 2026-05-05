@@ -8,9 +8,10 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json prisma.config.ts ./
 RUN pnpm install --frozen-lockfile
 
 COPY prisma ./prisma
-RUN npx prisma generate
+RUN pnpm exec prisma generate
 
 COPY src ./src
+COPY assets ./assets
 
 ENV NODE_ENV=production
 
