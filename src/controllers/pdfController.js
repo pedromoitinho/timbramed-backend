@@ -9,7 +9,7 @@ const patientSchema = z.object({
   pacienteNome: z.string().trim().min(2).max(120),
   mensagemFinal: z.string().trim().max(4000).optional(),
   mensagem: z.string().trim().max(4000).optional(),
-  cid: z.string().trim().max(16).optional().nullable(),
+  cid: z.string().trim().max(120).optional().nullable(),
   dataRelatorio: z.string().optional().nullable(),
   data: z.string().optional().nullable(),
   medicoNome: z.string().trim().max(120).optional().nullable()
