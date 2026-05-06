@@ -23,10 +23,22 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(date)
 }
 
+function capitalizeName(value) {
+  return String(value || "").trim().replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function normalizeWhitespace(value) {
+  return String(value || "")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ +/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 function buildBodyText(patient) {
   const patientName = patient.pacienteNome || patient.nomePaciente
   const message = patient.mensagemFinal || patient.mensagem || ""
-  return [`Paciente: ${patientName}`, "", message].filter(Boolean).join("\n")
+  return [`Paciente: ${capitalizeName(patientName)}`, "", normalizeWhitespace(message)].filter(Boolean).join("\n")
 }
 
 function dataUrlToBuffer(value) {
