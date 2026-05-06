@@ -63,7 +63,9 @@ model Hospital {
   carimboImagem String?               @map("carimbo_imagem") @db.Text
   relatorioImagem String?             @map("relatorio_imagem") @db.Text
   assinaturaImagem String?            @map("assinatura_imagem") @db.Text
+  exameImagem     String?             @map("exame_imagem") @db.Text
   coordenadas   Coordenadas?
+  coordenadasExame CoordenadasExame?
   usuarios      Usuario[]
   cids          Cid[]
   relatorios    RelatoriosFila[]
@@ -105,6 +107,30 @@ model Cid {
 
   @@unique([hospitalId, codigo])
   @@map("cids")
+}
+
+model CoordenadasExame {
+  id                  String   @id @default(cuid())
+  hospitalId          String   @unique @map("hospital_id")
+  nomeXcm             Decimal  @map("nome_x_cm") @db.Decimal(8, 2)
+  nomeYcm             Decimal  @map("nome_y_cm") @db.Decimal(8, 2)
+  enderecoXcm         Decimal  @map("endereco_x_cm") @db.Decimal(8, 2)
+  enderecoYcm         Decimal  @map("endereco_y_cm") @db.Decimal(8, 2)
+  identidadeXcm       Decimal  @map("identidade_x_cm") @db.Decimal(8, 2)
+  identidadeYcm       Decimal  @map("identidade_y_cm") @db.Decimal(8, 2)
+  motivoXcm           Decimal  @map("motivo_x_cm") @db.Decimal(8, 2)
+  motivoYcm           Decimal  @map("motivo_y_cm") @db.Decimal(8, 2)
+  exameSolicitadoXcm  Decimal  @map("exame_solicitado_x_cm") @db.Decimal(8, 2)
+  exameSolicitadoYcm  Decimal  @map("exame_solicitado_y_cm") @db.Decimal(8, 2)
+  codigoXcm           Decimal  @map("codigo_x_cm") @db.Decimal(8, 2)
+  codigoYcm           Decimal  @map("codigo_y_cm") @db.Decimal(8, 2)
+  pacienteXcm         Decimal  @map("paciente_x_cm") @db.Decimal(8, 2)
+  pacienteYcm         Decimal  @map("paciente_y_cm") @db.Decimal(8, 2)
+  hospital            Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("coordenadas_exame")
 }
 
 model RelatoriosFila {

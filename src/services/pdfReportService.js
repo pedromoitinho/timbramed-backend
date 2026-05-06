@@ -40,10 +40,11 @@ function dataUrlToBuffer(value) {
 }
 
 function computeBodyFontSize(doc, text, width, maxHeight) {
-  let size = bodyFontSize
+  if (!text) return bodyFontSize
+  let size = 20
   while (size >= 7) {
     doc.fontSize(size)
-    const h = doc.heightOfString(text, { width, lineGap: 3 })
+    const h = doc.heightOfString(text, { width, lineGap: 2 })
     if (h <= maxHeight) return size
     size -= 0.5
   }
@@ -95,7 +96,8 @@ function drawPatientReport(doc, hospital, patient) {
   doc.fontSize(bodyFontSizeFinal).text(bodyText, cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
     width: bodyWidth,
     height: bodyHeight,
-    lineGap: 3
+    align: 'justify',
+    lineGap: 2
   })
 
   doc.fontSize(bodyFontSize).text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {

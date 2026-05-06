@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { prisma } from "../lib/prisma.js"
 import { createBatchReportPdf } from "../services/pdfReportService.js"
+import { createExamPdf } from "../services/pdfExamService.js"
 import { completeReports } from "./reportController.js"
 
 const patientSchema = z.object({
@@ -59,6 +60,58 @@ export async function generatePdf(req, res, next) {
 
     res.setHeader("Content-Type", "application/pdf")
     res.setHeader("Content-Disposition", `inline; filename="timbramed-${Date.now()}.pdf"`)
+    res.setHeader("Content-Length", pdf.length)
+    res.end(pdf)
+  } catch (error) {
+    next(error)
+  }
+}
+
+const examPatientSchema = z.object({
+  nome: z.string().trim().max(120).default(""),
+  endereco: z.string().trim().max(200).default(""),
+  identidade: z.string().trim().max(60).default(""),
+  motivo: z.string().trim().max(500).default(""),
+  exameSolicitado: z.string().trim().max(200).default(""),
+  codigo: z.string().trim().max(60).default(""),
+  paciente: z.string().trim().max(120).default("")
+})
+
+const generateExamPdfSchema = z.object({
+  hospitalId: z.string().min(1),
+  paciente: examPatientSchema,
+  comExame: z.boolean().optional().default(false)
+})
+
+export async function generateExamPdf(req, res, next) {
+  try {
+    const payload = generateExamPdfSchema.parse(req.body)
+    const hospitalId = req.user.role === "MEDICO" ? req.user.hospitalAtualId : payload.hospitalId
+
+    if (!hospitalId) {
+      res.status(400).json({ message: "Medico sem hospital atual configurado" })
+      return
+    }
+
+    if (req.user.role === "MEDICO" && payload.hospitalId !== hospitalId) {
+      res.status(403).json({ message: "Hospital nao permitido para este medico" })
+      return
+    }
+
+    const hospital = await prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      include: { coordenadasExame: true }
+    })
+
+    if (!hospital) {
+      res.status(404).json({ message: "Hospital nao encontrado" })
+      return
+    }
+
+    const pdf = await createExamPdf({ hospital, paciente: payload.paciente, comExame: payload.comExame })
+
+    res.setHeader("Content-Type", "application/pdf")
+    res.setHeader("Content-Disposition", `inline; filename="exame-${Date.now()}.pdf"`)
     res.setHeader("Content-Length", pdf.length)
     res.end(pdf)
   } catch (error) {
