@@ -61,6 +61,7 @@ function drawExamFields(doc, hospital, paciente) {
 
     doc.fontSize(bodyFontSize).text(text, cmToPt(x), cartesianYToPdfPt(y), {
       width: maxWidth,
+      height: cmToPt(0.8),
       lineBreak: false
     })
   })

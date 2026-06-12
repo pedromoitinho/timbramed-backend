@@ -1,0 +1,2 @@
+ALTER TABLE "coordenadas"
+ADD COLUMN IF NOT EXISTS "corpo_fonte_px" DECIMAL(5,2) NOT NULL DEFAULT 17;

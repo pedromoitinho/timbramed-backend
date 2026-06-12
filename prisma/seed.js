@@ -12,10 +12,9 @@ const coordenadasPadraoA5 = {
   corpoYcm: -4.8,
   corpoMaxXcm: 14.3,
   corpoLimiteInferiorYcm: -14.5,
+  corpoFontePx: 17,
   cidXcm: 1.5,
   cidYcm: -16.3,
-  encerramentoXcm: 9.0,
-  encerramentoYcm: -15.5,
   carimboXcm: 9.5,
   carimboYcm: -17.5
 }

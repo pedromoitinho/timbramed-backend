@@ -8,7 +8,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const fontsDirectory = path.resolve(__dirname, "../../assets/fonts")
 const inkColor = "#111111"
-const bodyFontSize = 12.5
+const minBodyFontSizePx = 8
+const maxBodyFontSizePx = 30
+const singleLineFontSize = 12.5
 const titleFontSize = 13.5
 const a5PageCm = { width: 14.8, height: 21 }
 const a5PageSize = [cmToPt(a5PageCm.width), cmToPt(a5PageCm.height)]
@@ -18,9 +20,32 @@ function resolveFontPath(fontFileName) {
   return path.join(fontsDirectory, safeFontFileName)
 }
 
-function formatDate(value) {
-  const date = value ? new Date(value) : new Date()
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(date)
+function pxToPt(value) {
+  return Number(value) * 0.75
+}
+
+function measureBodyTextHeightPx(doc, text, width, fontSizePx) {
+  doc.fontSize(pxToPt(fontSizePx))
+  return doc.heightOfString(text, {
+    width,
+    lineGap: 2,
+    align: "justify",
+    paragraphGap: 4
+  })
+}
+
+function resolveBodyFontSizePx(doc, text, width, maxHeight) {
+  if (!text || width <= 0 || maxHeight <= 0) {
+    return maxBodyFontSizePx
+  }
+
+  for (let size = maxBodyFontSizePx; size >= minBodyFontSizePx; size -= 0.5) {
+    if (measureBodyTextHeightPx(doc, text, width, size) <= maxHeight) {
+      return size
+    }
+  }
+
+  return minBodyFontSizePx
 }
 
 function capitalizeName(value) {
@@ -29,16 +54,15 @@ function capitalizeName(value) {
 
 function normalizeWhitespace(value) {
   return String(value || "")
-    .replace(/[^\S\n]+/g, " ")
+    .replace(/[\r\n]+/g, " ")
     .replace(/ +/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
 
 function buildBodyText(patient) {
   const patientName = patient.pacienteNome || patient.nomePaciente
   const message = patient.mensagemFinal || patient.mensagem || ""
-  return [`Paciente: ${capitalizeName(patientName)}`, "", normalizeWhitespace(message)].filter(Boolean).join("\n")
+  return [`Paciente: ${capitalizeName(patientName)}`, normalizeWhitespace(message)].filter(Boolean).join("\n\n")
 }
 
 function dataUrlToBuffer(value) {
@@ -49,18 +73,6 @@ function dataUrlToBuffer(value) {
   }
 
   return Buffer.from(parts[1], "base64")
-}
-
-function computeBodyFontSize(doc, text, width, maxHeight) {
-  if (!text) return bodyFontSize
-  let size = 20
-  while (size >= 7) {
-    doc.fontSize(size)
-    const h = doc.heightOfString(text, { width, lineGap: 2 })
-    if (h <= maxHeight) return size
-    size -= 0.5
-  }
-  return 7
 }
 
 function drawBackgroundIfNeeded(doc, hospital) {
@@ -87,11 +99,13 @@ function drawPatientReport(doc, hospital, patient) {
   const coordinates = hospital.coordenadas
   const bodyWidth = widthFromCartesianRange(coordinates.corpoXcm, coordinates.corpoMaxXcm)
   const bodyHeight = heightFromCartesianRange(coordinates.corpoYcm, coordinates.corpoLimiteInferiorYcm)
-  const dateLabel = formatDate(patient.dataRelatorio || patient.data)
-  const closingText = `Atenciosamente,\nFSA ${dateLabel}`
+  const bodyText = buildBodyText(patient)
+  const bodyFontSizePx = resolveBodyFontSizePx(doc, bodyText, bodyWidth, bodyHeight)
+  const bodyFontSizePt = pxToPt(bodyFontSizePx)
   const stampText = patient.medicoNome || "Dr. FSA"
   const cidText = patient.cid ? `CID: ${patient.cid}` : "CID:"
-  const closingWidth = cmToPt(a5PageCm.width - Number(coordinates.encerramentoXcm))
+  const titleWidth = cmToPt(a5PageCm.width - Number(coordinates.tituloXcm))
+  const cidWidth = cmToPt(a5PageCm.width - Number(coordinates.cidXcm))
   const stampWidth = cmToPt(a5PageCm.width - Number(coordinates.carimboXcm))
   const stampBuffer = dataUrlToBuffer(hospital.carimboImagem)
   const signatureBuffer = dataUrlToBuffer(hospital.assinaturaImagem)
@@ -99,26 +113,23 @@ function drawPatientReport(doc, hospital, patient) {
   doc.font("hospital-font").fillColor(inkColor)
 
   doc.fontSize(titleFontSize).text("RELATÓRIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
+    width: titleWidth,
+    height: cmToPt(0.8),
     lineBreak: false
   })
 
-  const bodyText = buildBodyText(patient)
-  const bodyFontSizeFinal = computeBodyFontSize(doc, bodyText, bodyWidth, bodyHeight)
-
-  doc.fontSize(bodyFontSizeFinal).text(bodyText, cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
+  doc.fontSize(bodyFontSizePt).text(bodyText, cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
     width: bodyWidth,
     height: bodyHeight,
-    align: 'justify',
-    lineGap: 2
+    align: "justify",
+    lineGap: 2,
+    paragraphGap: 4
   })
 
-  doc.fontSize(bodyFontSize).text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
+  doc.fontSize(singleLineFontSize).text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
+    width: cidWidth,
+    height: cmToPt(0.8),
     lineBreak: false
-  })
-
-  doc.fontSize(bodyFontSize).text(closingText, cmToPt(coordinates.encerramentoXcm), cartesianYToPdfPt(coordinates.encerramentoYcm), {
-    width: closingWidth,
-    lineGap: 2
   })
 
   if (stampBuffer) {
@@ -127,15 +138,17 @@ function drawPatientReport(doc, hospital, patient) {
         fit: [stampWidth, cmToPt(2.4)]
       })
     } catch {
-      doc.font("hospital-font").fillColor(inkColor)
+      doc.font("hospital-font").fillColor(inkColor).fontSize(singleLineFontSize)
       doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
         width: stampWidth,
+        height: cmToPt(2.4),
         align: "center"
       })
     }
   } else {
-    doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
+    doc.fontSize(singleLineFontSize).text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
       width: stampWidth,
+      height: cmToPt(2.4),
       align: "center"
     })
   }

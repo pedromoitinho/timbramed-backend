@@ -30,8 +30,6 @@ const defaultCoordinates = {
   corpoLimiteInferiorYcm: -14.5,
   cidXcm: 1.5,
   cidYcm: -16.3,
-  encerramentoXcm: 9,
-  encerramentoYcm: -15.5,
   carimboXcm: 9.5,
   carimboYcm: -17.5
 }

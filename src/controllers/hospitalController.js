@@ -8,10 +8,9 @@ const coordinatesSchema = z.object({
   corpoYcm: z.coerce.number().min(-21).max(0),
   corpoMaxXcm: z.coerce.number().min(0).max(14.8),
   corpoLimiteInferiorYcm: z.coerce.number().min(-21).max(0),
+  corpoFontePx: z.coerce.number().min(8).max(30).default(17),
   cidXcm: z.coerce.number().min(0).max(14.8),
   cidYcm: z.coerce.number().min(-21).max(0),
-  encerramentoXcm: z.coerce.number().min(0).max(14.8),
-  encerramentoYcm: z.coerce.number().min(-21).max(0),
   carimboXcm: z.coerce.number().min(0).max(14.8),
   carimboYcm: z.coerce.number().min(-21).max(0)
 }).superRefine((value, context) => {
