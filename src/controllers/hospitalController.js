@@ -83,7 +83,6 @@ export async function getHospital(req, res, next) {
       where: { id: req.params.id },
       include: {
         coordenadas: true,
-        coordenadasExame: true,
         cids: { orderBy: { codigo: "asc" } }
       }
     })
@@ -93,7 +92,21 @@ export async function getHospital(req, res, next) {
       return
     }
 
-    res.json(hospital)
+    let coordenadasExame = null
+    try {
+      coordenadasExame = await prisma.coordenadasExame.findUnique({
+        where: { hospitalId: req.params.id }
+      })
+    } catch (error) {
+      if (error?.code !== "P2021") {
+        throw error
+      }
+    }
+
+    res.json({
+      ...hospital,
+      coordenadasExame
+    })
   } catch (error) {
     next(error)
   }
