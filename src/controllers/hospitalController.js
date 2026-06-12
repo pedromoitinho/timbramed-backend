@@ -51,6 +51,65 @@ function canAccessHospital(req, hospitalId) {
   return req.user.hospitalAtualId === hospitalId || req.user.role === "ADMIN"
 }
 
+function firstResult(rows) {
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null
+}
+
+async function findCoordinates(hospitalId) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      id,
+      hospital_id AS "hospitalId",
+      titulo_x_cm AS "tituloXcm",
+      titulo_y_cm AS "tituloYcm",
+      corpo_x_cm AS "corpoXcm",
+      corpo_y_cm AS "corpoYcm",
+      corpo_max_x_cm AS "corpoMaxXcm",
+      corpo_limite_inferior_y_cm AS "corpoLimiteInferiorYcm",
+      corpo_fonte_px AS "corpoFontePx",
+      cid_x_cm AS "cidXcm",
+      cid_y_cm AS "cidYcm",
+      carimbo_x_cm AS "carimboXcm",
+      carimbo_y_cm AS "carimboYcm",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM coordenadas
+    WHERE hospital_id = ${hospitalId}
+    LIMIT 1
+  `
+
+  return firstResult(rows)
+}
+
+async function findExamCoordinates(hospitalId) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      id,
+      hospital_id AS "hospitalId",
+      nome_x_cm AS "nomeXcm",
+      nome_y_cm AS "nomeYcm",
+      endereco_x_cm AS "enderecoXcm",
+      endereco_y_cm AS "enderecoYcm",
+      identidade_x_cm AS "identidadeXcm",
+      identidade_y_cm AS "identidadeYcm",
+      motivo_x_cm AS "motivoXcm",
+      motivo_y_cm AS "motivoYcm",
+      exame_solicitado_x_cm AS "exameSolicitadoXcm",
+      exame_solicitado_y_cm AS "exameSolicitadoYcm",
+      codigo_x_cm AS "codigoXcm",
+      codigo_y_cm AS "codigoYcm",
+      paciente_x_cm AS "pacienteXcm",
+      paciente_y_cm AS "pacienteYcm",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM coordenadas_exame
+    WHERE hospital_id = ${hospitalId}
+    LIMIT 1
+  `
+
+  return firstResult(rows)
+}
+
 export async function listHospitals(req, res, next) {
   try {
     const where = req.user.hospitalAtualId ? { id: req.user.hospitalAtualId } : undefined
@@ -80,11 +139,7 @@ export async function getHospital(req, res, next) {
     }
 
     const hospital = await prisma.hospital.findUnique({
-      where: { id: req.params.id },
-      include: {
-        coordenadas: true,
-        cids: { orderBy: { codigo: "asc" } }
-      }
+      where: { id: req.params.id }
     })
 
     if (!hospital) {
@@ -92,19 +147,28 @@ export async function getHospital(req, res, next) {
       return
     }
 
-    let coordenadasExame = null
-    try {
-      coordenadasExame = await prisma.coordenadasExame.findUnique({
-        where: { hospitalId: req.params.id }
+    const [coordenadas, cids] = await Promise.all([
+      findCoordinates(req.params.id),
+      prisma.cid.findMany({
+        where: { hospitalId: req.params.id },
+        orderBy: { codigo: "asc" }
       })
+    ])
+
+    let coordenadasExame = null
+
+    try {
+      coordenadasExame = await findExamCoordinates(req.params.id)
     } catch (error) {
-      if (error?.code !== "P2021") {
+      if (!["P2021", "P2022"].includes(error?.code)) {
         throw error
       }
     }
 
     res.json({
       ...hospital,
+      coordenadas,
+      cids,
       coordenadasExame
     })
   } catch (error) {
