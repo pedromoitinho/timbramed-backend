@@ -10,7 +10,7 @@ const fontsDirectory = path.resolve(__dirname, "../../assets/fonts")
 const inkColor = "#111111"
 const bodyFontSize = 11
 const a5PageCm = { width: 14.8, height: 21 }
-const a5PageSize = [cmToPt(a5PageCm.width), cmToPt(a5PageCm.height)]
+const a5PageSize = "A5"
 
 function resolveFontPath(fontFileName) {
   const safeFontFileName = path.basename(fontFileName || "SourceSerif4.ttf")
@@ -28,7 +28,7 @@ function drawBackgroundIfNeeded(doc, hospital) {
   const buffer = dataUrlToBuffer(hospital.exameImagem)
   if (!buffer) return
   try {
-    doc.image(buffer, 0, 0, { width: a5PageSize[0], height: a5PageSize[1] })
+    doc.image(buffer, 0, 0, { width: doc.page.width, height: doc.page.height })
   } catch {}
 }
 
@@ -84,7 +84,8 @@ export function createExamPdf({ hospital, paciente, comExame }) {
     const doc = new PDFDocument({
       autoFirstPage: false,
       margin: 0,
-      size: a5PageSize
+      size: a5PageSize,
+      layout: "portrait"
     })
 
     doc.on("data", chunk => chunks.push(chunk))
