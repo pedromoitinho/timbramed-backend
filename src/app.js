@@ -38,6 +38,14 @@ app.use((req, res) => {
 })
 
 app.use((error, req, res, next) => {
+  console.error("[api-error]", {
+    path: req.path,
+    method: req.method,
+    message: error?.message,
+    code: error?.code,
+    name: error?.name
+  })
+
   if (error instanceof ZodError) {
     res.status(400).json({ message: "Dados inválidos", issues: error.issues })
     return

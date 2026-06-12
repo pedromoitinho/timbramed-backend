@@ -56,10 +56,12 @@ export async function listHospitals(req, res, next) {
     const where = req.user.hospitalAtualId ? { id: req.user.hospitalAtualId } : undefined
     const hospitals = await prisma.hospital.findMany({
       where,
-      include: {
-        coordenadas: true,
-        coordenadasExame: true,
-        cids: { orderBy: { codigo: "asc" } }
+      select: {
+        id: true,
+        nome: true,
+        larguraCm: true,
+        alturaCm: true,
+        fonteArquivo: true
       },
       orderBy: { nome: "asc" }
     })
