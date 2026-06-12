@@ -4,6 +4,72 @@ import { createBatchReportPdf } from "../services/pdfReportService.js"
 import { createExamPdf } from "../services/pdfExamService.js"
 import { completeReports } from "./reportController.js"
 
+function firstResult(rows) {
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null
+}
+
+async function findReportCoordinates(hospitalId) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      id,
+      hospital_id AS "hospitalId",
+      titulo_x_cm AS "tituloXcm",
+      titulo_y_cm AS "tituloYcm",
+      corpo_x_cm AS "corpoXcm",
+      corpo_y_cm AS "corpoYcm",
+      corpo_max_x_cm AS "corpoMaxXcm",
+      corpo_limite_inferior_y_cm AS "corpoLimiteInferiorYcm",
+      corpo_fonte_px AS "corpoFontePx",
+      cid_x_cm AS "cidXcm",
+      cid_y_cm AS "cidYcm",
+      carimbo_x_cm AS "carimboXcm",
+      carimbo_y_cm AS "carimboYcm",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM coordenadas
+    WHERE hospital_id = ${hospitalId}
+    LIMIT 1
+  `
+
+  return firstResult(rows)
+}
+
+async function findExamCoordinates(hospitalId) {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      id,
+      hospital_id AS "hospitalId",
+      nome_x_cm AS "nomeXcm",
+      nome_y_cm AS "nomeYcm",
+      endereco_x_cm AS "enderecoXcm",
+      endereco_y_cm AS "enderecoYcm",
+      identidade_x_cm AS "identidadeXcm",
+      identidade_y_cm AS "identidadeYcm",
+      motivo_x_cm AS "motivoXcm",
+      motivo_y_cm AS "motivoYcm",
+      exame_solicitado_x_cm AS "exameSolicitadoXcm",
+      exame_solicitado_y_cm AS "exameSolicitadoYcm",
+      codigo_x_cm AS "codigoXcm",
+      codigo_y_cm AS "codigoYcm",
+      paciente_x_cm AS "pacienteXcm",
+      paciente_y_cm AS "pacienteYcm",
+      created_at AS "createdAt",
+      updated_at AS "updatedAt"
+    FROM coordenadas_exame
+    WHERE hospital_id = ${hospitalId}
+    LIMIT 1
+  `
+
+  return firstResult(rows)
+}
+
+function sendPdf(res, pdf, filename) {
+  res.setHeader("Content-Type", "application/pdf")
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`)
+  res.setHeader("Content-Length", pdf.length)
+  res.end(pdf)
+}
+
 const patientSchema = z.object({
   id: z.string().optional().nullable(),
   pacienteNome: z.string().trim().min(2).max(120),
@@ -37,12 +103,18 @@ export async function generatePdf(req, res, next) {
     }
 
     const hospital = await prisma.hospital.findUnique({
-      where: { id: hospitalId },
-      include: { coordenadas: true }
+      where: { id: hospitalId }
     })
 
     if (!hospital) {
       res.status(404).json({ message: "Hospital nao encontrado" })
+      return
+    }
+
+    const coordenadas = await findReportCoordinates(hospitalId)
+
+    if (!coordenadas) {
+      res.status(400).json({ message: "Hospital sem coordenadas configuradas" })
       return
     }
 
@@ -53,15 +125,12 @@ export async function generatePdf(req, res, next) {
       medicoNome: patient.medicoNome || req.user.nome
     }))
 
-    const pdf = await createBatchReportPdf({ hospital, patients, comRelatorio: payload.comRelatorio })
+    const pdf = await createBatchReportPdf({ hospital: { ...hospital, coordenadas }, patients, comRelatorio: payload.comRelatorio })
     const reportIds = patients.map(patient => patient.id).filter(Boolean)
 
     await completeReports(reportIds)
 
-    res.setHeader("Content-Type", "application/pdf")
-    res.setHeader("Content-Disposition", `inline; filename="timbramed-${Date.now()}.pdf"`)
-    res.setHeader("Content-Length", pdf.length)
-    res.end(pdf)
+    sendPdf(res, pdf, `timbramed-${Date.now()}.pdf`)
   } catch (error) {
     next(error)
   }
@@ -99,8 +168,7 @@ export async function generateExamPdf(req, res, next) {
     }
 
     const hospital = await prisma.hospital.findUnique({
-      where: { id: hospitalId },
-      include: { coordenadasExame: true }
+      where: { id: hospitalId }
     })
 
     if (!hospital) {
@@ -108,12 +176,24 @@ export async function generateExamPdf(req, res, next) {
       return
     }
 
-    const pdf = await createExamPdf({ hospital, paciente: payload.paciente, comExame: payload.comExame })
+    let coordenadasExame = null
 
-    res.setHeader("Content-Type", "application/pdf")
-    res.setHeader("Content-Disposition", `inline; filename="exame-${Date.now()}.pdf"`)
-    res.setHeader("Content-Length", pdf.length)
-    res.end(pdf)
+    try {
+      coordenadasExame = await findExamCoordinates(hospitalId)
+    } catch (error) {
+      if (!["P2021", "P2022"].includes(error?.code)) {
+        throw error
+      }
+    }
+
+    if (!coordenadasExame) {
+      res.status(400).json({ message: "Hospital sem coordenadas de exame configuradas" })
+      return
+    }
+
+    const pdf = await createExamPdf({ hospital: { ...hospital, coordenadasExame }, paciente: payload.paciente, comExame: payload.comExame })
+
+    sendPdf(res, pdf, `exame-${Date.now()}.pdf`)
   } catch (error) {
     next(error)
   }
