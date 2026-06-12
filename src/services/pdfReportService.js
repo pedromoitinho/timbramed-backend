@@ -8,12 +8,17 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const fontsDirectory = path.resolve(__dirname, "../../assets/fonts")
 const inkColor = "#111111"
-const minBodyFontSizePx = 8
+const minBodyFontSizePx = 4
 const maxBodyFontSizePx = 30
 const singleLineFontSize = 12.5
 const titleFontSize = 13.5
 const a5PageCm = { width: 14.8, height: 21 }
 const a5PageSize = "A5"
+const bodyTextOptions = {
+  align: "justify",
+  lineGap: 2,
+  paragraphGap: 4
+}
 
 function resolveFontPath(fontFileName) {
   const safeFontFileName = path.basename(fontFileName || "SourceSerif4.ttf")
@@ -28,9 +33,7 @@ function measureBodyTextHeightPx(doc, text, width, fontSizePx) {
   doc.fontSize(pxToPt(fontSizePx))
   return doc.heightOfString(text, {
     width,
-    lineGap: 2,
-    align: "justify",
-    paragraphGap: 4
+    ...bodyTextOptions
   })
 }
 
@@ -39,8 +42,10 @@ function resolveBodyFontSizePx(doc, text, width, maxHeight) {
     return maxBodyFontSizePx
   }
 
-  for (let size = maxBodyFontSizePx; size >= minBodyFontSizePx; size -= 0.5) {
-    if (measureBodyTextHeightPx(doc, text, width, size) <= maxHeight) {
+  const safeMaxHeight = maxHeight * 0.96
+
+  for (let size = maxBodyFontSizePx; size >= minBodyFontSizePx; size -= 0.25) {
+    if (measureBodyTextHeightPx(doc, text, width, size) <= safeMaxHeight) {
       return size
     }
   }
@@ -100,8 +105,6 @@ function drawPatientReport(doc, hospital, patient) {
   const bodyWidth = widthFromCartesianRange(coordinates.corpoXcm, coordinates.corpoMaxXcm)
   const bodyHeight = heightFromCartesianRange(coordinates.corpoYcm, coordinates.corpoLimiteInferiorYcm)
   const bodyText = buildBodyText(patient)
-  const bodyFontSizePx = resolveBodyFontSizePx(doc, bodyText, bodyWidth, bodyHeight)
-  const bodyFontSizePt = pxToPt(bodyFontSizePx)
   const stampText = patient.medicoNome || "Dr. FSA"
   const cidText = patient.cid ? `CID: ${patient.cid}` : "CID:"
   const titleWidth = cmToPt(a5PageCm.width - Number(coordinates.tituloXcm))
@@ -111,6 +114,8 @@ function drawPatientReport(doc, hospital, patient) {
   const signatureBuffer = dataUrlToBuffer(hospital.assinaturaImagem)
 
   doc.font("hospital-font").fillColor(inkColor)
+  const bodyFontSizePx = resolveBodyFontSizePx(doc, bodyText, bodyWidth, bodyHeight)
+  const bodyFontSizePt = pxToPt(bodyFontSizePx)
 
   doc.fontSize(titleFontSize).text("RELATÓRIO", cmToPt(coordinates.tituloXcm), cartesianYToPdfPt(coordinates.tituloYcm), {
     width: titleWidth,
@@ -121,9 +126,7 @@ function drawPatientReport(doc, hospital, patient) {
   doc.fontSize(bodyFontSizePt).text(bodyText, cmToPt(coordinates.corpoXcm), cartesianYToPdfPt(coordinates.corpoYcm), {
     width: bodyWidth,
     height: bodyHeight,
-    align: "justify",
-    lineGap: 2,
-    paragraphGap: 4
+    ...bodyTextOptions
   })
 
   doc.fontSize(singleLineFontSize).text(cidText, cmToPt(coordinates.cidXcm), cartesianYToPdfPt(coordinates.cidYcm), {
