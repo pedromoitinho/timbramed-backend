@@ -64,10 +64,16 @@ function normalizeWhitespace(value) {
     .trim()
 }
 
+function normalizeBodyText(value) {
+  return normalizeWhitespace(value)
+    .replace(/\s+-\s*/g, "\n-")
+    .trim()
+}
+
 function buildBodyText(patient) {
   const patientName = patient.pacienteNome || patient.nomePaciente
   const message = patient.mensagemFinal || patient.mensagem || ""
-  return [`Paciente: ${capitalizeName(patientName)}`, normalizeWhitespace(message)].filter(Boolean).join("\n\n")
+  return [`Paciente: ${capitalizeName(patientName)}`, normalizeBodyText(message)].filter(Boolean).join("\n\n")
 }
 
 function dataUrlToBuffer(value) {
