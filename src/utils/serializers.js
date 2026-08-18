@@ -7,6 +7,8 @@ export function normalizeReport(report) {
     mensagemFinal: report.mensagemFinal,
     cid: report.cid,
     dataRelatorio: report.dataRelatorio,
+    comCarimbo: report.comCarimbo !== false,
+    comData: report.comData !== false,
     status: report.status,
     impressoEm: report.impressoEm,
     createdAt: report.createdAt,

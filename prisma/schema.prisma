@@ -89,6 +89,8 @@ model Coordenadas {
   cidYcm                  Decimal  @map("cid_y_cm") @db.Decimal(8, 2)
   carimboXcm              Decimal  @map("carimbo_x_cm") @db.Decimal(8, 2)
   carimboYcm              Decimal  @map("carimbo_y_cm") @db.Decimal(8, 2)
+  dataXcm                 Decimal? @map("data_x_cm") @db.Decimal(8, 2)
+  dataYcm                 Decimal? @map("data_y_cm") @db.Decimal(8, 2)
   hospital                Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
@@ -140,6 +142,8 @@ model RelatoriosFila {
   mensagemFinal  String        @map("mensagem_final") @db.Text
   cid            String?
   dataRelatorio  DateTime      @default(now()) @map("data_relatorio")
+  comCarimbo     Boolean       @default(true) @map("com_carimbo")
+  comData        Boolean       @default(true) @map("com_data")
   status         ReportStatus  @default(PENDENTE)
   impressoEm     DateTime?     @map("impresso_em")
   hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)

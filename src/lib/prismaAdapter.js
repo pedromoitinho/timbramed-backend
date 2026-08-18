@@ -10,8 +10,11 @@ export function createPrismaPgAdapter(connectionString = process.env.DATABASE_UR
   const url = new URL(connectionString)
   const useSsl = !LOCAL_HOSTS.has(url.hostname)
 
+  const poolMax = Number(process.env.DATABASE_POOL_MAX)
+
   return new PrismaPg({
     connectionString,
-    ssl: useSsl ? { rejectUnauthorized: false } : false
+    ssl: useSsl ? { rejectUnauthorized: false } : false,
+    ...(Number.isInteger(poolMax) && poolMax > 0 ? { max: poolMax } : {})
   })
 }

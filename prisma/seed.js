@@ -16,7 +16,9 @@ const coordenadasPadraoA5 = {
   cidXcm: 1.5,
   cidYcm: -16.3,
   carimboXcm: 9.5,
-  carimboYcm: -17.5
+  carimboYcm: -17.5,
+  dataXcm: 5.4,
+  dataYcm: -16.5
 }
 
 const cidsIniciais = ["R07.4", "R51", "J11"]

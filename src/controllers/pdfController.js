@@ -24,6 +24,8 @@ async function findReportCoordinates(hospitalId) {
       cid_y_cm AS "cidYcm",
       carimbo_x_cm AS "carimboXcm",
       carimbo_y_cm AS "carimboYcm",
+      data_x_cm AS "dataXcm",
+      data_y_cm AS "dataYcm",
       created_at AS "createdAt",
       updated_at AS "updatedAt"
     FROM coordenadas
@@ -78,7 +80,9 @@ const patientSchema = z.object({
   cid: z.string().trim().max(120).optional().nullable(),
   dataRelatorio: z.string().optional().nullable(),
   data: z.string().optional().nullable(),
-  medicoNome: z.string().trim().max(120).optional().nullable()
+  medicoNome: z.string().trim().max(120).optional().nullable(),
+  comCarimbo: z.boolean().optional().default(true),
+  comData: z.boolean().optional().default(true)
 })
 
 const generatePdfSchema = z.object({
@@ -126,9 +130,8 @@ export async function generatePdf(req, res, next) {
     }))
 
     const pdf = await createBatchReportPdf({ hospital: { ...hospital, coordenadas }, patients, comRelatorio: payload.comRelatorio })
-    const reportIds = patients.map(patient => patient.id).filter(Boolean)
 
-    await completeReports(reportIds)
+    await completeReports(hospitalId, patients.filter(patient => patient.id))
 
     sendPdf(res, pdf, `timbramed-${Date.now()}.pdf`)
   } catch (error) {

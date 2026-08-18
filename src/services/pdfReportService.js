@@ -12,8 +12,10 @@ const minBodyFontSizePx = 4
 const maxBodyFontSizePx = 30
 const singleLineFontSize = 12.5
 const titleFontSize = 13.5
+const stampBoxHeightCm = 2.4
 const a5PageCm = { width: 14.8, height: 21 }
 const a5PageSize = "A5"
+const reportTimeZone = process.env.REPORT_TIMEZONE || "America/Sao_Paulo"
 const bodyTextOptions = {
   align: "justify",
   lineGap: 2,
@@ -51,6 +53,21 @@ function resolveBodyFontSizePx(doc, text, width, maxHeight) {
   }
 
   return minBodyFontSizePx
+}
+
+export function formatReportDate(value) {
+  const date = value ? new Date(value) : new Date()
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date
+
+  try {
+    return new Intl.DateTimeFormat("pt-BR", { timeZone: reportTimeZone }).format(safeDate)
+  } catch {
+    return new Intl.DateTimeFormat("pt-BR").format(safeDate)
+  }
+}
+
+function hasCoordinate(value) {
+  return value !== null && value !== undefined && value !== "" && !Number.isNaN(Number(value))
 }
 
 function capitalizeName(value) {
@@ -116,8 +133,11 @@ function drawPatientReport(doc, hospital, patient) {
   const titleWidth = cmToPt(a5PageCm.width - Number(coordinates.tituloXcm))
   const cidWidth = cmToPt(a5PageCm.width - Number(coordinates.cidXcm))
   const stampWidth = cmToPt(a5PageCm.width - Number(coordinates.carimboXcm))
+  const stampHeight = cmToPt(stampBoxHeightCm)
   const stampBuffer = dataUrlToBuffer(hospital.carimboImagem)
   const signatureBuffer = dataUrlToBuffer(hospital.assinaturaImagem)
+  const withStamp = patient.comCarimbo !== false
+  const withDate = patient.comData !== false && hasCoordinate(coordinates.dataXcm) && hasCoordinate(coordinates.dataYcm)
 
   doc.font("hospital-font").fillColor(inkColor)
   const bodyFontSizePx = resolveBodyFontSizePx(doc, bodyText, bodyWidth, bodyHeight)
@@ -141,23 +161,36 @@ function drawPatientReport(doc, hospital, patient) {
     lineBreak: false
   })
 
+  if (withDate) {
+    const dateWidth = cmToPt(a5PageCm.width - Number(coordinates.dataXcm))
+    doc.fontSize(singleLineFontSize).text(formatReportDate(patient.dataRelatorio || patient.data), cmToPt(coordinates.dataXcm), cartesianYToPdfPt(coordinates.dataYcm), {
+      width: dateWidth,
+      height: cmToPt(0.8),
+      lineBreak: false
+    })
+  }
+
+  if (!withStamp) {
+    return
+  }
+
   if (stampBuffer) {
     try {
       doc.image(stampBuffer, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
-        fit: [stampWidth, cmToPt(2.4)]
+        fit: [stampWidth, stampHeight]
       })
     } catch {
       doc.font("hospital-font").fillColor(inkColor).fontSize(singleLineFontSize)
       doc.text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
         width: stampWidth,
-        height: cmToPt(2.4),
+        height: stampHeight,
         align: "center"
       })
     }
   } else {
     doc.fontSize(singleLineFontSize).text(stampText, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
       width: stampWidth,
-      height: cmToPt(2.4),
+      height: stampHeight,
       align: "center"
     })
   }
@@ -165,7 +198,7 @@ function drawPatientReport(doc, hospital, patient) {
   if (signatureBuffer) {
     try {
       doc.image(signatureBuffer, cmToPt(coordinates.carimboXcm), cartesianYToPdfPt(coordinates.carimboYcm), {
-        fit: [stampWidth, cmToPt(2.4)]
+        fit: [stampWidth, stampHeight]
       })
     } catch {
     }

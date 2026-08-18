@@ -4,7 +4,7 @@ import { cancelUserSubscription, getBillingStatus, mercadoPagoWebhook, startSubs
 import { createCid, deleteCid, listMedicalCatalog, updateCid } from "../controllers/catalogController.js"
 import { getHospital, listHospitals, updateHospitalCoordinates, updateHospitalExamCoordinates, updateHospitalExamImage, updateHospitalReport, updateHospitalSignature, updateHospitalStamp } from "../controllers/hospitalController.js"
 import { confirmEmailChange, getProfile, updateProfile } from "../controllers/profileController.js"
-import { createReport, listReports } from "../controllers/reportController.js"
+import { createReport, listReports, updateReport } from "../controllers/reportController.js"
 import { generateExamPdf, generatePdf } from "../controllers/pdfController.js"
 import { requireAuth, requireProductAccess } from "../middlewares/authMiddleware.js"
 import { createRateLimiter } from "../middlewares/securityMiddleware.js"
@@ -44,5 +44,6 @@ router.put("/cids/:id", requireAuth, requireProductAccess, updateCid)
 router.delete("/cids/:id", requireAuth, requireProductAccess, deleteCid)
 router.get("/reports", requireAuth, requireProductAccess, listReports)
 router.post("/reports", requireAuth, requireProductAccess, createReport)
+router.patch("/reports/:id", requireAuth, requireProductAccess, updateReport)
 router.post("/generate-pdf", requireAuth, requireProductAccess, generatePdf)
 router.post("/generate-exam-pdf", requireAuth, requireProductAccess, generateExamPdf)

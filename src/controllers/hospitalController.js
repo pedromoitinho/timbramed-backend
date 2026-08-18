@@ -12,7 +12,9 @@ const coordinatesSchema = z.object({
   cidXcm: z.coerce.number().min(0).max(14.8),
   cidYcm: z.coerce.number().min(-21).max(0),
   carimboXcm: z.coerce.number().min(0).max(14.8),
-  carimboYcm: z.coerce.number().min(-21).max(0)
+  carimboYcm: z.coerce.number().min(-21).max(0),
+  dataXcm: z.coerce.number().min(0).max(14.8).nullable().optional(),
+  dataYcm: z.coerce.number().min(-21).max(0).nullable().optional()
 }).superRefine((value, context) => {
   if (value.corpoMaxXcm <= value.corpoXcm) {
     context.addIssue({
@@ -71,6 +73,8 @@ async function findCoordinates(hospitalId) {
       cid_y_cm AS "cidYcm",
       carimbo_x_cm AS "carimboXcm",
       carimbo_y_cm AS "carimboYcm",
+      data_x_cm AS "dataXcm",
+      data_y_cm AS "dataYcm",
       created_at AS "createdAt",
       updated_at AS "updatedAt"
     FROM coordenadas
