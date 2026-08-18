@@ -16,6 +16,7 @@ const stampBoxHeightCm = 2.4
 const a5PageCm = { width: 14.8, height: 21 }
 const a5PageSize = "A5"
 const reportTimeZone = process.env.REPORT_TIMEZONE || "America/Sao_Paulo"
+const reportDateCity = "Feira de Santana"
 const bodyTextOptions = {
   align: "justify",
   lineGap: 2,
@@ -64,6 +65,10 @@ export function formatReportDate(value) {
   } catch {
     return new Intl.DateTimeFormat("pt-BR").format(safeDate)
   }
+}
+
+export function buildReportDateText(value) {
+  return `${reportDateCity}, ${formatReportDate(value)}`
 }
 
 function hasCoordinate(value) {
@@ -163,7 +168,7 @@ function drawPatientReport(doc, hospital, patient) {
 
   if (withDate) {
     const dateWidth = cmToPt(a5PageCm.width - Number(coordinates.dataXcm))
-    doc.fontSize(singleLineFontSize).text(formatReportDate(patient.dataRelatorio || patient.data), cmToPt(coordinates.dataXcm), cartesianYToPdfPt(coordinates.dataYcm), {
+    doc.fontSize(singleLineFontSize).text(buildReportDateText(patient.dataRelatorio || patient.data), cmToPt(coordinates.dataXcm), cartesianYToPdfPt(coordinates.dataYcm), {
       width: dateWidth,
       height: cmToPt(0.8),
       lineBreak: false
